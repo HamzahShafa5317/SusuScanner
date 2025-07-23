@@ -5,32 +5,34 @@ def load_model_dummy():
     return "dummy_model"
 
 def classify_image(image: Image.Image, model):
+    """
+    Dummy classifier untuk membedakan gambar susu vs kemasan.
+    Berdasarkan kecerahan gambar (grayscale mean pixel).
+    """
     image = image.resize((64, 64)).convert("L")
     mean_pixel = np.array(image).mean()
-
     if mean_pixel > 127:
         return "susu"
     else:
         return "kemasan"
 
 def predict_quality(category: str):
-    import random
+    """
+    Prediksi kualitas tergantung dari kategori:
+    - Jika 'susu' → susu segar atau susu basi
+    - Jika 'kemasan' → kemasan bagus atau kemasan rusak
+    """
     if category == "susu":
-        labels = ['Bagus', 'Basi', 'Rusak', 'Segar']
+        label = 'susu segar' if np.random.rand() > 0.5 else 'susu basi'
         details = {
-            'Bagus': 'Warna putih bersih, tidak menggumpal, dan tidak berbau.',
-            'Basi': 'Menggumpal, berbau asam, atau warna kekuningan.',
-            'Rusak': 'Tampak ada kontaminasi, warna tidak merata.',
-            'Segar': 'Kondisi baru, suhu penyimpanan ideal, dan tampilan normal.'
+            'susu segar': 'Susu terlihat putih cerah, tidak menggumpal, dan berbau segar.',
+            'susu basi': 'Susu tampak menggumpal atau berbau asam, menandakan basi.'
         }
     else:
-        labels = ['Utuh', 'Kotor', 'Rusak', 'Bocor']
+        label = 'kemasan bagus' if np.random.rand() > 0.5 else 'kemasan rusak'
         details = {
-            'Utuh': 'Tidak ada kerusakan fisik pada kemasan.',
-            'Kotor': 'Kemasan tampak kotor oleh debu atau noda.',
-            'Rusak': 'Terdapat sobekan atau penyok pada kemasan.',
-            'Bocor': 'Kemasan tidak kedap, cairan keluar atau merembes.'
+            'kemasan bagus': 'Kemasan tampak utuh, bersih, dan tidak ada kerusakan fisik.',
+            'kemasan rusak': 'Kemasan terlihat penyok, bocor, atau kotor.'
         }
-    
-    label = random.choice(labels)
+
     return label, details[label]
