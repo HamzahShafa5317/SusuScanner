@@ -1,55 +1,57 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-import pickle
-from skimage.color import rgb2gray
+import joblib
 from skimage.feature import hog
+from skimage.color import rgb2gray
+from skimage.transform import resize
 
-# Load model bundle
-with open("model_susu.pkl", "rb") as f:
-    bundle = pickle.load(f)
-    scaler = bundle["scaler"]
-    selector = bundle["selector"]
-    model = bundle["model"]
+# Load model dan scaler
+model_bundle = joblib.load("model_susu.pkl")
+model = model_bundle["model"]
+scaler = model_bundle["scaler"]
 
-# Konfigurasi layout
-st.set_page_config(layout="wide")
-st.title("🥛 Prediksi Jenis Susu")
+# Fungsi ekstraksi fitur dari gambar
+def extract_features(image_pil):
+    # Resize ke ukuran yang sesuai pelatihan model (ubah jika model latih pakai ukuran lain)
+    fixed_size = (128, 128)
+    image_resized = image_pil.resize(fixed_size)
 
-# Buat layout 2 kolom
-col1, col2 = st.columns([1, 2])
+    # Ubah ke array numpy
+    image_array = np.array(image_resized)
 
-# Kolom kiri: gambar tetap (susu.png)
-with col1:
-    st.image("susu.png", caption="Gambar Susu", use_container_width=True)
+    # Konversi ke grayscale jika masih RGB
+    if len(image_array.shape) == 3:
+        gray = rgb2gray(image_array)
+    else:
+        gray = image_array
 
-# Kolom kanan: upload dan prediksi
-with col2:
-    st.markdown("### 📤 Upload Gambar Susu")
-    uploaded_file = st.file_uploader("Pilih file gambar (.jpg/.png)", type=["jpg", "jpeg", "png"])
+    # Ekstraksi fitur HOG
+    features = hog(gray,
+                   orientations=9,
+                   pixels_per_cell=(8, 8),
+                   cells_per_block=(2, 2),
+                   visualize=False,
+                   multichannel=False)
+    return features
 
-    if uploaded_file is not None:
-        # Tampilkan gambar upload
-        img = Image.open(uploaded_file).convert("RGB")
-        st.image(img, caption="Gambar yang Diunggah", width=300)
+# UI Streamlit
+st.title("🥛 Deteksi Kualitas Susu dari Gambar")
+st.markdown("Upload gambar susu untuk diprediksi kualitasnya menggunakan model SVM.")
 
-        # Resize dan konversi ke grayscale
-        img_resized = img.resize((128, 128))
-        gray = rgb2gray(np.array(img_resized))
+uploaded_file = st.file_uploader("Pilih file gambar (.jpg/.png)", type=["jpg", "jpeg", "png"])
 
-        # Ekstraksi fitur HOG (tanpa multichannel)
-        features, _ = hog(
-            gray,
-            orientations=9,
-            pixels_per_cell=(8, 8),
-            cells_per_block=(2, 2),
-            visualize=True
-        )
+if uploaded_file is not None:
+    try:
+        # Tampilkan gambar
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Gambar yang diupload", width=250)
 
-        # Normalisasi dan seleksi fitur
-        X_scaled = scaler.transform([features])
-        X_selected = selector.transform(X_scaled)
+        # Ekstrak dan prediksi
+        features = extract_features(image)
+        features_scaled = scaler.transform([features])
+        prediction = model.predict(features_scaled)[0]
 
-        # Prediksi
-        prediction = model.predict(X_selected)[0]
         st.success(f"✅ Prediksi: **{prediction}**")
+    except Exception as e:
+        st.error(f"❌ Terjadi kesalahan saat memproses gambar: {e}")
