@@ -11,47 +11,53 @@ model_bundle = joblib.load("model_susu.pkl")
 model = model_bundle["model"]
 scaler = model_bundle["scaler"]
 
-# Fungsi ekstraksi fitur dari gambar
+# Fungsi untuk ekstraksi fitur HOG
 def extract_features(image_pil):
-    # Resize ke ukuran yang sesuai pelatihan model (ubah jika model latih pakai ukuran lain)
     fixed_size = (128, 128)
     image_resized = image_pil.resize(fixed_size)
-
-    # Ubah ke array numpy
     image_array = np.array(image_resized)
 
-    # Konversi ke grayscale jika masih RGB
+    # Ubah ke grayscale jika RGB
     if len(image_array.shape) == 3:
         gray = rgb2gray(image_array)
     else:
         gray = image_array
 
-    # Ekstraksi fitur HOG
+    # Ekstrak fitur HOG tanpa multichannel
     features = hog(gray,
                    orientations=9,
                    pixels_per_cell=(8, 8),
                    cells_per_block=(2, 2),
-                   visualize=False,
-                   multichannel=False)
+                   visualize=False)
     return features
 
-# UI Streamlit
-st.title("🥛 Deteksi Kualitas Susu dari Gambar")
-st.markdown("Upload gambar susu untuk diprediksi kualitasnya menggunakan model SVM.")
+# Fungsi deskripsi hasil prediksi
+def get_keterangan(prediksi_label):
+    keterangan_dict = {
+        "baik": "Susu terdeteksi dalam kondisi **baik**, warna dan bentuk kemasan sesuai standar.",
+        "buruk": "Susu kemungkinan dalam kondisi **buruk**, mungkin disebabkan oleh kerusakan kemasan, perubahan warna, atau faktor lainnya.",
+        "rusak": "Susu **rusak**, segera periksa kondisi fisik kemasan dan isinya. Tidak disarankan untuk dikonsumsi.",
+    }
+    return keterangan_dict.get(prediksi_label.lower(), "Tidak diketahui kondisi susu.")
 
-uploaded_file = st.file_uploader("Pilih file gambar (.jpg/.png)", type=["jpg", "jpeg", "png"])
+# UI Streamlit
+st.set_page_config(page_title="Deteksi Kualitas Susu", layout="centered")
+st.title("🥛 Deteksi Kualitas Susu dari Gambar")
+st.write("Upload gambar susu untuk diprediksi kualitasnya menggunakan model SVM.")
+
+uploaded_file = st.file_uploader("📤 Pilih file gambar (.jpg/.png)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     try:
-        # Tampilkan gambar
         image = Image.open(uploaded_file)
-        st.image(image, caption="Gambar yang diupload", width=250)
+        st.image(image, caption="🖼️ Gambar yang diupload", width=250)
 
-        # Ekstrak dan prediksi
         features = extract_features(image)
         features_scaled = scaler.transform([features])
         prediction = model.predict(features_scaled)[0]
 
-        st.success(f"✅ Prediksi: **{prediction}**")
+        st.success(f"✅ Prediksi: **{prediction.upper()}**")
+        st.markdown(f"📌 Penjelasan: {get_keterangan(prediction)}")
+
     except Exception as e:
         st.error(f"❌ Terjadi kesalahan saat memproses gambar: {e}")
