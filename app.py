@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import cv2
 from skimage.feature import hog
 from skimage.color import rgb2gray
 import joblib
