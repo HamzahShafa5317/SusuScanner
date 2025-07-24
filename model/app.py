@@ -2,9 +2,12 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import joblib
+from skimage.color import rgb2gray
+from skimage.transform import resize
+from skimage.feature import hog
 
 # Load model
-model = joblib.load("model/model_susu.pkl")  # Pastikan file ini ada di folder yang sama
+model = joblib.load("model/model_susu_hog.pkl")  # Ganti dengan path yang benar jika berbeda
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Milk Scanner", layout="centered")
@@ -19,14 +22,18 @@ uploaded_file = st.file_uploader("📷 Unggah gambar susu atau kemasan:", type=[
 
 # Prediksi
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).resize((64, 64)).convert("L")  # grayscale
-    st.image(image, caption="🖼️ Gambar yang Diunggah", width=300)
+    image = Image.open(uploaded_file).convert("RGB")
+    image_resized = resize(np.array(image), (128, 128))  # Resize ke ukuran training
+    image_gray = rgb2gray(image_resized)
 
-    # Preprocessing
-    img_array = np.array(image).flatten().reshape(1, -1)  # Sesuai bentuk input model
+    # Ekstraksi fitur HOG
+    features = hog(image_gray, pixels_per_cell=(8, 8), cells_per_block=(2, 2), visualize=False)
+    features = features.reshape(1, -1)
 
     # Prediksi
-    prediction = model.predict(img_array)[0]
+    prediction = model.predict(features)[0]
+
+    st.image(image, caption="🖼️ Gambar yang Diunggah", width=300)
 
     # Penjelasan hasil
     details = {
