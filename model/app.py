@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 
 # Load model
-model = joblib.load("model_susu.pkl")  # Pastikan file ini ada di folder yang sama
+model = joblib.load("model/model_susu.pkl")  # Pastikan file ini ada di folder yang sama
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Milk Scanner", layout="centered")
